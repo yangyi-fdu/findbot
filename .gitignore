@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+# colcon output lives in ~/ros2_ws, outside this repo, but guard anyway
+build/
+install/
+log/
+# model weights / large artifacts
+*.pt
+*.onnx
+.env

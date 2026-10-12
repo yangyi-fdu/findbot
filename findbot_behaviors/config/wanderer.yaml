@@ -1,0 +1,8 @@
+wanderer:
+  ros__parameters:
+    use_sim_time: true      # follow Gazebo's /clock instead of wall time
+    linear_speed: 0.15
+    angular_speed: 0.6
+    safe_distance: 0.45
+    front_half_angle: 30.0
+    scan_timeout: 1.0
