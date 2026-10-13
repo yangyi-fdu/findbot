@@ -62,8 +62,6 @@ def main(argv=None):
     parser.add_argument('target', nargs='*', help='place name, or x y [yaw_deg] in the map frame')
     parser.add_argument('--places', default=default_places_file(), help='YAML file with named places')
     parser.add_argument('--list', action='store_true', help='list known places and exit')
-    parser.add_argument('--localizer', default='amcl',
-                        help="'amcl' with a saved map, 'slam_toolbox' while mapping")
     args = parser.parse_args(argv)
 
     places = load_places(args.places)
@@ -81,7 +79,11 @@ def main(argv=None):
     nav = BasicNavigator(node_name='go_to')
     nav.set_parameters([Parameter('use_sim_time', value=True)])
     try:
-        nav.waitUntilNav2Active(localizer=args.localizer)
+        # Wait for the navigator only. With localizer='amcl', BasicNavigator keeps
+        # publishing /initialpose (at the map origin) until it hears /amcl_pose,
+        # which silently teleports AMCL's estimate back to home if the robot is
+        # elsewhere. 'robot_localization' skips that handshake.
+        nav.waitUntilNav2Active(localizer='robot_localization')
         nav.info(f'going to ({x:.2f}, {y:.2f}), facing {yaw:.0f} deg')
         nav.goToPose(make_pose(nav, x, y, yaw))
 
