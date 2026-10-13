@@ -1,0 +1,8 @@
+# Named places in the `map` frame of maps/tb3_world.yaml (origin = robot spawn point).
+# x, y in metres; yaw in degrees (direction the robot faces on arrival).
+# The pillar grid is centred at about (2.0, 0.5) with 1.1 m spacing.
+places:
+  home:     {x: 0.0, y:  0.0, yaw:   0.0}   # spawn point, west side
+  far_side: {x: 3.9, y:  0.5, yaw: 180.0}   # east side, facing back towards home
+  north:    {x: 2.0, y:  2.3, yaw: -90.0}   # between the top pillar row and the wall
+  south:    {x: 2.0, y: -1.3, yaw:  90.0}   # between the bottom pillar row and the wall

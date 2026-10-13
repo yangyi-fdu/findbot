@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'wanderer = findbot_behaviors.wanderer:main',
+            'go_to = findbot_behaviors.go_to:main',
         ],
     },
 )
