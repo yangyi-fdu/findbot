@@ -1,0 +1,7 @@
+# Ask the semantic map for remembered objects.
+# Empty label / color match anything. Only confirmed objects are returned,
+# best match (most observations) first.
+string label
+string color
+---
+SemanticObject[] objects
