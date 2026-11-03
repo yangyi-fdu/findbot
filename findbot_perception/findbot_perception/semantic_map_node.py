@@ -13,6 +13,7 @@ import yaml
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import Point
 from nav_msgs.msg import OccupancyGrid
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from visualization_msgs.msg import Marker, MarkerArray
@@ -58,6 +59,10 @@ class SemanticMapNode(Node):
         self.create_service(QueryObjects, 'semantic_map/query', self.on_query)
         self.marker_pub = self.create_publisher(MarkerArray, 'semantic_map/markers', 10)
         self.create_timer(1.0, self.publish_markers)
+        # Save periodically, not only on shutdown: a killed process or power loss
+        # would otherwise lose everything learned in this session.
+        self.dirty = False
+        self.create_timer(10.0, self.save_if_dirty)
         self.known = set()   # ids already announced as confirmed
 
     def on_map(self, msg: OccupancyGrid):
@@ -85,6 +90,7 @@ class SemanticMapNode(Node):
                                            f'walls/pillars (latest: {o.label})')
                 continue
             self.memory.add(o.label, o.position.x, o.position.y, o.position.z, o.confidence, o.color, stamp)
+            self.dirty = True
         for obj in self.memory.confirmed():
             if obj.id not in self.known:
                 self.known.add(obj.id)
@@ -130,11 +136,19 @@ class SemanticMapNode(Node):
                 arr.markers.append(m)
         self.marker_pub.publish(arr)
 
-    def save(self):
+    def save_if_dirty(self):
+        if self.dirty:
+            self.save(quiet=True)
+            self.dirty = False
+
+    def save(self, quiet=False):
         os.makedirs(os.path.dirname(self.memory_file), exist_ok=True)
-        with open(self.memory_file, 'w') as f:
+        tmp = self.memory_file + '.tmp'
+        with open(tmp, 'w') as f:
             yaml.safe_dump(self.memory.to_list(), f, sort_keys=False)
-        self.get_logger().info(f'saved {len(self.memory.objects)} objects to {self.memory_file}')
+        os.replace(tmp, self.memory_file)  # atomic: never leaves a half-written file
+        if not quiet:
+            print(f'[semantic_map] saved {len(self.memory.objects)} objects to {self.memory_file}')
 
 
 def main(args=None):
@@ -142,7 +156,7 @@ def main(args=None):
     node = SemanticMapNode()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.save()
