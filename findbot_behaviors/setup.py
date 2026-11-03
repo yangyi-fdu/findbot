@@ -25,6 +25,8 @@ setup(
         'console_scripts': [
             'wanderer = findbot_behaviors.wanderer:main',
             'go_to = findbot_behaviors.go_to:main',
+            'find_object_server = findbot_behaviors.find_object_server:main',
+            'find = findbot_behaviors.find_cli:main',
         ],
     },
 )

@@ -18,6 +18,7 @@ class MemoryObject:
     confidence_sum: float = 0.0
     colors: Counter = field(default_factory=Counter)
     last_seen: float = 0.0          # seconds (any monotonic clock the caller uses)
+    snapshot_confidence: float = 0.0  # detector score of the best saved photo of this object
 
     @property
     def confidence(self) -> float:
@@ -35,7 +36,8 @@ class MemoryObject:
     def to_dict(self) -> dict:
         return {'id': self.id, 'label': self.label, 'x': self.x, 'y': self.y, 'z': self.z,
                 'observations': self.observations, 'confidence_sum': self.confidence_sum,
-                'colors': dict(self.colors), 'last_seen': self.last_seen}
+                'colors': dict(self.colors), 'last_seen': self.last_seen,
+                'snapshot_confidence': self.snapshot_confidence}
 
     @classmethod
     def from_dict(cls, d: dict) -> 'MemoryObject':

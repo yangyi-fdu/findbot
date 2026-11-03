@@ -41,6 +41,8 @@ class SemanticMapNode(Node):
         self.memory = SemanticMemory(p('merge_radius').value, p('min_observations').value,
                                      p('conflict_radius').value)
         self.memory_file = p('memory_file').value
+        # one JPEG per remembered object: <dir of memory_file>/snapshots/<id>.jpg
+        self.snapshot_dir = os.path.join(os.path.dirname(self.memory_file), 'snapshots')
         if p('load_memory').value and os.path.exists(self.memory_file):
             with open(self.memory_file) as f:
                 self.memory.load_list(yaml.safe_load(f) or [])
@@ -89,8 +91,14 @@ class SemanticMapNode(Node):
                     self.get_logger().info(f'rejected {self.rejected_static} detections on mapped '
                                            f'walls/pillars (latest: {o.label})')
                 continue
-            self.memory.add(o.label, o.position.x, o.position.y, o.position.z, o.confidence, o.color, stamp)
+            obj = self.memory.add(o.label, o.position.x, o.position.y, o.position.z, o.confidence, o.color, stamp)
             self.dirty = True
+            # Keep the most confident photo of every object (used by reports and the LLM step).
+            if o.snapshot.data and o.confidence > obj.snapshot_confidence:
+                os.makedirs(self.snapshot_dir, exist_ok=True)
+                with open(os.path.join(self.snapshot_dir, f'{obj.id}.jpg'), 'wb') as f:
+                    f.write(bytes(o.snapshot.data))
+                obj.snapshot_confidence = float(o.confidence)
         for obj in self.memory.confirmed():
             if obj.id not in self.known:
                 self.known.add(obj.id)

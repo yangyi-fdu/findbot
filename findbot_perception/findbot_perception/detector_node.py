@@ -17,7 +17,7 @@ from message_filters import ApproximateTimeSynchronizer, Subscriber
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from tf2_geometry_msgs import do_transform_point
 from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
@@ -108,6 +108,7 @@ class ObjectDetector(Node):
             obs.label, obs.color, obs.confidence = label, color, float(score)
             obs.position = p_map
             obs.distance = float(z)
+            obs.snapshot = self.snapshot(bgr, x1, y1, x2, y2, rgb_msg.header)
             out.observations.append(obs)
 
             cv2.rectangle(annotated, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
@@ -122,6 +123,20 @@ class ObjectDetector(Node):
         if out.observations:
             self.get_logger().info(', '.join(
                 f'{o.color} {o.label} @({o.position.x:.2f},{o.position.y:.2f})' for o in out.observations))
+
+    @staticmethod
+    def snapshot(bgr, x1, y1, x2, y2, header) -> CompressedImage:
+        """JPEG crop of the detection with a little context around it."""
+        h, w = bgr.shape[:2]
+        px, py = 0.15 * (x2 - x1), 0.15 * (y2 - y1)
+        crop = bgr[max(0, int(y1 - py)):min(h, int(y2 + py)), max(0, int(x1 - px)):min(w, int(x2 + px))]
+        msg = CompressedImage()
+        msg.header = header
+        msg.format = 'jpeg'
+        ok, buf = cv2.imencode('.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if ok:
+            msg.data = buf.tobytes()
+        return msg
 
     def to_target_frame(self, p_cam, header):
         pt = PointStamped()

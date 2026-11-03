@@ -1,0 +1,17 @@
+# Find an object: use the semantic map if it already knows one, otherwise explore
+# the named places (looking around at each) until it is seen, then drive up to it.
+
+# ---- goal
+string label                 # detector class, e.g. "fire hydrant"
+string color                 # optional colour filter, e.g. "red" ("" = any)
+bool explore true            # explore if the object is not in memory yet
+---
+# ---- result
+bool success
+string message               # human-readable outcome
+SemanticObject object        # the object that was found (if success)
+float32 elapsed              # seconds
+---
+# ---- feedback
+string state                 # QUERYING | APPROACHING | EXPLORING | LOOKING
+string detail                # e.g. "going to north (2/4)"
