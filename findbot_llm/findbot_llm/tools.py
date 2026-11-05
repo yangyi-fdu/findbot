@@ -42,8 +42,38 @@ if a search failed, say so and suggest what the user could try next.\
 """
 
 
+def validate_args(name, args, places):
+    """Check tool arguments against the same enums the schemas declare.
+
+    Claude's strict mode guarantees this already; other providers don't, so the agent
+    always validates before touching the robot. Raises ValueError with a message the
+    model can act on.
+    """
+    if not isinstance(args, dict):
+        raise ValueError('arguments must be a JSON object')
+    if name == 'find_object':
+        if args.get('label') not in COCO_CLASSES:
+            raise ValueError(f'label {args.get("label")!r} is not a detector class; '
+                             'tell the user the robot cannot recognize it')
+        if args.get('color', 'any') not in COLORS:
+            raise ValueError(f'color must be one of {COLORS}')
+    elif name == 'go_to':
+        if args.get('place') not in places:
+            raise ValueError(f'unknown place {args.get("place")!r}; known places: {list(places)}')
+    elif name != 'list_known_objects':
+        raise ValueError(f'unknown tool {name!r}')
+
+
+def openai_style_tools(places):
+    """The same tools in the OpenAI-compatible format used by Zhipu GLM."""
+    return [{'type': 'function',
+             'function': {'name': t['name'], 'description': t['description'],
+                          'parameters': t['input_schema']}}
+            for t in build_tools(places)]
+
+
 def build_tools(places):
-    """Tool definitions for the Messages API. `places`: list of place names from places.yaml."""
+    """Tool definitions for the Claude Messages API. `places`: place names from places.yaml."""
     no_extra = {'additionalProperties': False}
     return [
         {
