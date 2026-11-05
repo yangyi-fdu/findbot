@@ -3,7 +3,7 @@
 source ~/ros2_setup/ros_env.sh >/dev/null
 bash ~/ros2_setup/killsim.sh >/dev/null; ros2_daemon_ensure
 source ~/ros2_ws/install/setup.bash
-rm -rf ~/.findbot ~/findbot_report; mkdir -p ~/findbot_report
+rm -rf ~/.findbot/semantic_map.yaml ~/.findbot/snapshots ~/findbot_report; mkdir -p ~/findbot_report
 ros2 launch findbot_bringup system.launch.py rviz:=false >/tmp/eval_sys.log 2>&1 &
 echo "[$(date +%T)] 等待系统就绪……"
 for _ in $(seq 60); do ros2 action list 2>/dev/null | grep -q find_object && break; sleep 5; done
