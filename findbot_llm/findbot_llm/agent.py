@@ -53,9 +53,9 @@ class ClaudeBackend:
         self.messages.append({'role': 'assistant', 'content': r.content})
         text = '\n'.join(b.text for b in r.content if b.type == 'text').strip()
         if r.stop_reason == 'refusal':
-            return Turn(text, problem='模型拒绝了这个请求，换个说法试试。')
+            return Turn(text, problem='the model declined this request; try rephrasing it')
         if r.stop_reason == 'max_tokens':
-            return Turn(text, problem='回复被截断了。')
+            return Turn(text, problem='the reply was cut off')
         calls = [ToolCall(b.id, b.name, b.input) for b in r.content if b.type == 'tool_use']
         return Turn(text, calls if r.stop_reason == 'tool_use' else [])
 
@@ -73,7 +73,7 @@ class ZhipuBackend:
         self.client, self.model = client, model
         self.tools = openai_style_tools(places)
         self.messages = [{'role': 'system', 'content': system}]
-        # The free models answer HTTP 429 "访问量过大" at busy times; retry those with backoff.
+        # The free models answer HTTP 429 ("too many requests") at busy times; retry with backoff.
         self.busy_errors, self.sleep = tuple(busy_errors), sleep
 
     def add_user(self, text):
@@ -113,9 +113,9 @@ class ZhipuBackend:
         self.messages.append(turn_msg)
         text = (msg.content or '').strip()
         if choice.finish_reason == 'sensitive':
-            return Turn(text, problem='请求被内容安全审核拦截了，换个说法试试。')
+            return Turn(text, problem='the request was blocked by the content filter; try rephrasing it')
         if choice.finish_reason == 'length':
-            return Turn(text, problem='回复被截断了。')
+            return Turn(text, problem='the reply was cut off')
         return Turn(text, calls)
 
     def add_tool_results(self, results):
@@ -135,12 +135,12 @@ class RobotAgent:
         for _ in range(MAX_TOOL_ROUNDS + 1):
             turn = self.backend.step()
             if turn.problem:
-                return f'（{turn.problem}）'
+                return f'({turn.problem})'
             if not turn.calls:
                 return turn.text
             results = []
             for call in turn.calls:
-                self.log(f'  → 调用工具 {call.name}({json.dumps(call.args, ensure_ascii=False)})')
+                self.log(f'  → tool call {call.name}({json.dumps(call.args, ensure_ascii=False)})')
                 try:
                     validate_args(call.name, call.args, self.places)
                     results.append((call.id, self.run_tool(call.name, call.args), False))
@@ -148,7 +148,7 @@ class RobotAgent:
                     self.log(f'    ✗ {e}')
                     results.append((call.id, str(e), True))
             self.backend.add_tool_results(results)
-        return '（工具调用次数太多，已停止。）'
+        return '(stopped: too many tool calls for one request)'
 
     def run_tool(self, name, args):
         if name == 'find_object':

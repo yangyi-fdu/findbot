@@ -40,7 +40,7 @@ class SemanticMapNode(Node):
         p = self.get_parameter
         self.memory = SemanticMemory(p('merge_radius').value, p('min_observations').value,
                                      p('conflict_radius').value)
-        self.memory_file = p('memory_file').value
+        self.memory_file = os.path.expanduser(p('memory_file').value)
         # one JPEG per remembered object: <dir of memory_file>/snapshots/<id>.jpg
         self.snapshot_dir = os.path.join(os.path.dirname(self.memory_file), 'snapshots')
         if p('load_memory').value and os.path.exists(self.memory_file):

@@ -1,7 +1,7 @@
 object_detector:
   ros__parameters:
     use_sim_time: true
-    model: /home/ari/findbot_models/yolo11n.pt
+    model: ~/findbot_models/yolo11n.pt
     confidence: 0.4
     max_rate: 2.0
     target_frame: map
@@ -19,5 +19,5 @@ semantic_map:
     # (none of them exist in the arena). Detections on mapped obstacles are also rejected.
     ignore_labels: ['airplane', 'tv', 'refrigerator', 'toilet', 'bench', 'umbrella', 'traffic light']
     static_map_reject_radius: 0.1
-    memory_file: /home/ari/.findbot/semantic_map.yaml
+    memory_file: ~/.findbot/semantic_map.yaml
     load_memory: true

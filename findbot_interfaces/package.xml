@@ -4,7 +4,7 @@
   <name>findbot_interfaces</name>
   <version>0.1.0</version>
   <description>Messages, services and actions for findbot.</description>
-  <maintainer email="yy13770086966@gmail.com">ari</maintainer>
+  <maintainer email="192686107+yangyi-fdu@users.noreply.github.com">Yang Yi</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

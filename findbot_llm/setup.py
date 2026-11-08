@@ -12,8 +12,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ari',
-    maintainer_email='yy13770086966@gmail.com',
+    maintainer='Yang Yi',
+    maintainer_email='192686107+yangyi-fdu@users.noreply.github.com',
     description='Natural-language interface: Claude tool use on top of the FindObject action.',
     license='MIT',
     entry_points={

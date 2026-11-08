@@ -1,11 +1,11 @@
 """Talk to the robot in natural language.
 
   ros2 run findbot_llm chat                                  # interactive, Zhipu GLM (free model)
-  ros2 run findbot_llm chat "帮我找红色的消防栓"                # one request
+  ros2 run findbot_llm chat "find the red fire hydrant"       # one request (any language)
   ros2 run findbot_llm chat --model glm-5.3                   # Zhipu flagship model
   ros2 run findbot_llm chat --backend claude                  # Claude instead
 
-Needs an API key (bash ~/ros2_setup/set_api_key.sh zhipu|claude) and the running
+Needs an API key (scripts/set_api_key.sh zhipu|claude) and the running
 system (ros2 launch findbot_bringup system.launch.py).
 """
 import argparse
@@ -63,8 +63,8 @@ def main():
     args = ap.parse_args(argv)
 
     if not os.environ.get(KEY_ENV[args.backend]):
-        print(f'❌ 没找到 {KEY_ENV[args.backend]}。请运行 bash ~/ros2_setup/set_api_key.sh {args.backend} '
-              '保存你的 key，然后重新打开终端。', flush=True)
+        print(f'❌ {KEY_ENV[args.backend]} is not set. Run scripts/set_api_key.sh {args.backend} '
+              'to save your key, then open a new terminal.', flush=True)
         return 1
 
     rclpy.init()
@@ -80,20 +80,21 @@ def main():
             print(f'🤖 {agent.ask(text)}\n', flush=True)
         # most specific first: the zhipu "connection" class is the SDK's base error class
         except auth_error:
-            print('❌ API 认证失败：请检查 key 是否正确。', flush=True)
+            print('❌ Authentication failed: check that the API key is correct.', flush=True)
             raise SystemExit(1)
         except status_error as e:
-            print(f'❌ API 错误：{e}', flush=True)
+            print(f'❌ API error: {e}', flush=True)
         except conn_error as e:
-            print(f'❌ 连不上 API（请检查网络 / VPN）：{e}', flush=True)
+            print(f'❌ Cannot reach the API (check the network / VPN): {e}', flush=True)
 
     try:
         if args.request:
             handle(' '.join(args.request))
         else:
-            print('和机器人说话吧（Ctrl+C 退出）。例如：你都看到过什么？/ 帮我找红色的消防栓\n')
+            print('Talk to the robot (Ctrl+C to quit). Try: "What have you seen?" / '
+                  '"Find the red fire hydrant"\n')
             while True:
-                text = input('你：').strip()
+                text = input('you: ').strip()
                 if text:
                     handle(text)
     except (KeyboardInterrupt, EOFError):

@@ -6,6 +6,7 @@ camera/image + camera/depth_image + camera/camera_info
   -> publishes findbot_interfaces/ObjectObservationArray on `detections`,
      an annotated image on `detections/image` and RViz markers on `detections/markers`.
 """
+import os
 import time
 
 import cv2
@@ -39,7 +40,7 @@ class ObjectDetector(Node):
         self.declare_parameter('ignore_classes', [''])
 
         from ultralytics import YOLO  # heavy import, keep it out of module import time
-        model = self.get_parameter('model').value
+        model = os.path.expanduser(self.get_parameter('model').value)
         self.get_logger().info(f'loading {model} ...')
         self.model = YOLO(model)
         self.bridge = CvBridge()

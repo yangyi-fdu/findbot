@@ -11,7 +11,7 @@ from rclpy.node import Node
 from findbot_interfaces.action import FindObject
 from findbot_interfaces.srv import QueryObjects
 
-STATE_CN = {'QUERYING': '查记忆', 'EXPLORING': '去别处找', 'LOOKING': '原地张望', 'APPROACHING': '靠近物体'}
+STATE_NAMES = {'QUERYING': 'memory', 'EXPLORING': 'search', 'LOOKING': 'look around', 'APPROACHING': 'approach'}
 
 
 class RosRobot(Node):
@@ -32,7 +32,7 @@ class RosRobot(Node):
 
         def on_feedback(msg):
             fb = msg.feedback
-            self.log(f'    [{STATE_CN.get(fb.state, fb.state)}] {fb.detail}')
+            self.log(f'    [{STATE_NAMES.get(fb.state, fb.state)}] {fb.detail}')
 
         res = self.run_action(self.find_client, goal, on_feedback).result
         o = res.object
@@ -61,7 +61,7 @@ class RosRobot(Node):
         pose.header.frame_id = 'map'
         pose.pose.position.x, pose.pose.position.y = x, y
         pose.pose.orientation.z, pose.pose.orientation.w = math.sin(math.radians(yaw) / 2), math.cos(math.radians(yaw) / 2)
-        self.log(f'    [导航] 去 {place} ({x:.1f}, {y:.1f})')
+        self.log(f'    [navigate] to {place} ({x:.1f}, {y:.1f})')
         t0 = time.monotonic()
         wrapped = self.run_action(self.nav_client, NavigateToPose.Goal(pose=pose), None)
         ok = wrapped.status == 4  # action_msgs/GoalStatus.STATUS_SUCCEEDED

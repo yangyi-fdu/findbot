@@ -63,24 +63,28 @@ class FakeZhipu:
         return self.responses.pop(0)
 
 
+def quiet(*_):
+    pass
+
+
 def claude_agent(responses, robot=None):
     client, robot = FakeClaude(responses), robot or FakeRobot()
-    return RobotAgent(ClaudeBackend(client, PLACES, SYSTEM_PROMPT), robot, PLACES, log=lambda *_: None), client, robot
+    return RobotAgent(ClaudeBackend(client, PLACES, SYSTEM_PROMPT), robot, PLACES, log=quiet), client, robot
 
 
 def zhipu_agent(responses, robot=None):
     client, robot = FakeZhipu(responses), robot or FakeRobot()
-    return RobotAgent(ZhipuBackend(client, PLACES, SYSTEM_PROMPT), robot, PLACES, log=lambda *_: None), client, robot
+    return RobotAgent(ZhipuBackend(client, PLACES, SYSTEM_PROMPT), robot, PLACES, log=quiet), client, robot
 
 
 # ---------------------------------------------------------------- Claude backend
 def test_claude_tool_call_then_answer():
     agent, client, robot = claude_agent([
-        NS(stop_reason='tool_use', content=[c_text('我去找找'),
+        NS(stop_reason='tool_use', content=[c_text('Let me look.'),
                                             c_tool('t1', 'find_object', {'label': 'fire hydrant', 'color': 'red'})]),
-        NS(stop_reason='end_turn', content=[c_text('找到了红色消防栓。')]),
+        NS(stop_reason='end_turn', content=[c_text('Found the red fire hydrant.')]),
     ])
-    assert agent.ask('帮我找红色的消防栓') == '找到了红色消防栓。'
+    assert agent.ask('Find the red fire hydrant') == 'Found the red fire hydrant.'
     assert robot.calls == [('find_object', 'fire hydrant', 'red')]
     msgs = client.requests[1]['messages']
     assert [m['role'] for m in msgs] == ['user', 'assistant', 'user']
@@ -90,25 +94,25 @@ def test_claude_tool_call_then_answer():
 def test_claude_robot_error_goes_back_as_is_error():
     agent, client, _ = claude_agent([
         NS(stop_reason='tool_use', content=[c_tool('t1', 'find_object', {'label': 'chair', 'color': 'any'})]),
-        NS(stop_reason='end_turn', content=[c_text('机器人系统没在运行。')]),
+        NS(stop_reason='end_turn', content=[c_text('The robot system is not running.')]),
     ], robot=FakeRobot(fail=True))
-    assert agent.ask('找椅子') == '机器人系统没在运行。'
+    assert agent.ask('Find a chair') == 'The robot system is not running.'
     result = client.requests[1]['messages'][2]['content'][0]
     assert result['is_error'] is True and 'not running' in result['content']
 
 
 def test_claude_refusal_is_handled():
     agent, _, _ = claude_agent([NS(stop_reason='refusal', content=[])])
-    assert '拒绝' in agent.ask('...')
+    assert 'declined' in agent.ask('...')
 
 
 # ---------------------------------------------------------------- Zhipu backend
 def test_zhipu_tool_call_then_answer():
     agent, client, robot = zhipu_agent([
         z_reply(calls=[('c1', 'find_object', json.dumps({'label': 'chair', 'color': 'any'}))], finish='tool_calls'),
-        z_reply('找到椅子了。'),
+        z_reply('Found a chair.'),
     ])
-    assert agent.ask('找把椅子') == '找到椅子了。'
+    assert agent.ask('Find a chair') == 'Found a chair.'
     assert robot.calls == [('find_object', 'chair', '')]
     msgs = client.requests[1]['messages']
     assert [m['role'] for m in msgs] == ['system', 'user', 'assistant', 'tool']
@@ -119,9 +123,9 @@ def test_zhipu_tool_call_then_answer():
 def test_zhipu_invalid_label_is_rejected_before_the_robot_moves():
     agent, client, robot = zhipu_agent([
         z_reply(calls=[('c1', 'find_object', json.dumps({'label': 'keys', 'color': 'any'}))], finish='tool_calls'),
-        z_reply('抱歉，机器人认不出钥匙。'),
+        z_reply('Sorry, the robot cannot recognize keys.'),
     ])
-    assert agent.ask('帮我找钥匙') == '抱歉，机器人认不出钥匙。'
+    assert agent.ask('Find my keys') == 'Sorry, the robot cannot recognize keys.'
     assert robot.calls == []
     tool_msg = client.requests[1]['messages'][3]
     assert tool_msg['content'].startswith('Error:') and 'not a detector class' in tool_msg['content']
@@ -130,9 +134,9 @@ def test_zhipu_invalid_label_is_rejected_before_the_robot_moves():
 def test_zhipu_malformed_json_arguments_are_reported():
     agent, client, robot = zhipu_agent([
         z_reply(calls=[('c1', 'go_to', '{"place": "north"')], finish='tool_calls'),
-        z_reply('好的。'),
+        z_reply('OK.'),
     ])
-    agent.ask('去北边')
+    agent.ask('Go north')
     assert robot.calls == [] and client.requests[1]['messages'][3]['content'].startswith('Error:')
 
 
@@ -141,7 +145,7 @@ class Busy(Exception):
 
 
 def test_zhipu_retries_when_busy_then_succeeds():
-    client = FakeZhipu([z_reply('好的')])
+    client = FakeZhipu([z_reply('OK')])
     real = client.create
     failures = [Busy(), Busy()]
 
@@ -152,8 +156,7 @@ def test_zhipu_retries_when_busy_then_succeeds():
     client.chat.completions.create = flaky
     waits = []
     backend = ZhipuBackend(client, PLACES, SYSTEM_PROMPT, busy_errors=(Busy,), sleep=waits.append)
-    agent = RobotAgent(backend, FakeRobot(), PLACES, log=lambda *_: None)
-    assert agent.ask('你好') == '好的'
+    assert RobotAgent(backend, FakeRobot(), PLACES, log=quiet).ask('hello') == 'OK'
     assert waits == [2, 4]
 
 
@@ -165,25 +168,25 @@ def test_zhipu_gives_up_after_retries():
     client.chat.completions.create = always_busy
     backend = ZhipuBackend(client, PLACES, SYSTEM_PROMPT, busy_errors=(Busy,), sleep=lambda s: None)
     with pytest.raises(Busy):
-        RobotAgent(backend, FakeRobot(), PLACES, log=lambda *_: None).ask('你好')
+        RobotAgent(backend, FakeRobot(), PLACES, log=quiet).ask('hello')
 
 
 def test_zhipu_content_filter_is_handled():
     agent, _, _ = zhipu_agent([z_reply(finish='sensitive')])
-    assert '审核' in agent.ask('...')
+    assert 'content filter' in agent.ask('...')
 
 
 def test_history_is_kept_across_requests():
     agent, client, _ = zhipu_agent([z_reply('a'), z_reply('b')])
-    agent.ask('第一句')
-    agent.ask('第二句')
+    agent.ask('first')
+    agent.ask('second')
     assert [m['role'] for m in client.requests[1]['messages']] == ['system', 'user', 'assistant', 'user']
 
 
 def test_too_many_tool_rounds_stops():
     call = ('c', 'list_known_objects', '{}')
     agent, _, robot = zhipu_agent([z_reply(calls=[call], finish='tool_calls')] * 10)
-    assert '太多' in agent.ask('一直查')
+    assert 'too many tool calls' in agent.ask('keep looking')
     assert len(robot.calls) == 7
 
 
