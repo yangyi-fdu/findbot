@@ -11,6 +11,14 @@ explores the room if needed, recognizes the object with an RGB-D camera, and dri
 ![Tests](https://img.shields.io/badge/unit%20tests-50%20passing-2b7a3d)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
+![findbot demo: the robot searches for a red fire hydrant and then a chair](docs/media/demo.gif)
+
+<sub>A recorded run at 20× speed (`demo/record_demo.sh`, `demo/render_gif.py`): "Find the red fire hydrant",
+then "Take me to the chair", starting from an empty memory. Left: the SLAM map with the robot, its trail,
+the Nav2 plan and the objects it has remembered. Right: the robot's camera with YOLO detections, and the
+conversation. Both backpacks in the arena end up labelled "person" in this run; see
+[Limitations](#limitations-and-next-steps).</sub>
+
 A simulated TurtleBot3 project that connects the main pieces of a modern mobile robot:
 SLAM and navigation, 3D object perception, an object memory, a long-running search task,
 and a language interface, each one tested against ground truth from the simulator.
@@ -140,6 +148,7 @@ Problems found during development, and how they were tracked down:
 | `findbot_behaviors` | `find_object_server`, `find` and `go_to` CLIs, a lidar `wanderer` |
 | `findbot_llm` | `chat` CLI: LLM tool-use loop with Zhipu and Claude backends |
 | `eval/` | Ground-truth evaluations and an HTML report generator |
+| `demo/` | Records a run (pose, plan, camera, memory, conversation) and renders the animation |
 
 ## Getting started
 
@@ -188,8 +197,10 @@ python3 eval/probe_llm.py --repeats 3     # language-only, fake robot, about a m
 
 ## Limitations and next steps
 
-- Closed-vocabulary detection (80 COCO classes). Next: an open-vocabulary detector such as
-  YOLO-World, which pairs naturally with language requests ("a red backpack on the floor").
+- Closed-vocabulary detection (80 COCO classes). Backpacks lying on the floor are not
+  recognized as backpacks: across runs the red one was labelled "suitcase" or "person", and in
+  the demo above both backpacks were remembered as "person". Next: an open-vocabulary detector
+  such as YOLO-World, which pairs naturally with language requests ("a red backpack on the floor").
 - Colour from a few sightings is unreliable under different viewing angles (the same chair
   was blue in one run and black in another).
 - The exploration tour visits fixed named places; frontier-based exploration would scale to
