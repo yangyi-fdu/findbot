@@ -136,6 +136,38 @@ def test_zhipu_malformed_json_arguments_are_reported():
     assert robot.calls == [] and client.requests[1]['messages'][3]['content'].startswith('Error:')
 
 
+class Busy(Exception):
+    pass
+
+
+def test_zhipu_retries_when_busy_then_succeeds():
+    client = FakeZhipu([z_reply('好的')])
+    real = client.create
+    failures = [Busy(), Busy()]
+
+    def flaky(**kw):
+        if failures:
+            raise failures.pop(0)
+        return real(**kw)
+    client.chat.completions.create = flaky
+    waits = []
+    backend = ZhipuBackend(client, PLACES, SYSTEM_PROMPT, busy_errors=(Busy,), sleep=waits.append)
+    agent = RobotAgent(backend, FakeRobot(), PLACES, log=lambda *_: None)
+    assert agent.ask('你好') == '好的'
+    assert waits == [2, 4]
+
+
+def test_zhipu_gives_up_after_retries():
+    client = FakeZhipu([])
+
+    def always_busy(**kw):
+        raise Busy()
+    client.chat.completions.create = always_busy
+    backend = ZhipuBackend(client, PLACES, SYSTEM_PROMPT, busy_errors=(Busy,), sleep=lambda s: None)
+    with pytest.raises(Busy):
+        RobotAgent(backend, FakeRobot(), PLACES, log=lambda *_: None).ask('你好')
+
+
 def test_zhipu_content_filter_is_handled():
     agent, _, _ = zhipu_agent([z_reply(finish='sensitive')])
     assert '审核' in agent.ask('...')

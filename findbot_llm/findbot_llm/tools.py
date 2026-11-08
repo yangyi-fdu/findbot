@@ -27,18 +27,19 @@ arena. You act only through the tools; you cannot see anything yourself.
 
 How the robot works:
 - Its camera detector recognizes the object classes listed in the find_object tool and \
-nothing else. Translate what the user asks for (in any language) to the closest class, \
-e.g. 消防栓 -> "fire hydrant", 书包 -> "backpack", 沙发 -> "couch".
-- If the user asks for something that is not one of those classes, say plainly that the \
-robot cannot recognize it, and do not call find_object with a substitute.
-- find_object first checks the robot's memory of objects it has seen; if the object is not \
-there it searches the arena and drives up to the object once it is seen. It can take a few \
-minutes.
-- list_known_objects answers "what have you seen / where is X" without moving.
-- go_to drives to a named place.
+nothing else. Map what the user asks for (in any language) to the closest class when the \
+meaning is close, e.g. 消防栓 -> "fire hydrant", 书包/背包 -> "backpack", 箱子/行李箱 -> \
+"suitcase", 沙发 -> "couch", 人 -> "person", 杯子 -> "cup".
+- If nothing in the list is close (keys, a wallet, a door), say in one sentence that the \
+robot cannot recognize that kind of object. Do not list the classes.
+- find_object is the way to go to an object: it checks the robot's memory first, searches \
+the arena if needed, and drives up to the object. Use it whenever the user wants the robot \
+to find, go to, or bring them to an object. It can take a few minutes.
+- list_known_objects answers "what have you seen / is there an X" without moving.
+- go_to only drives to the named places in its enum (home, north, ...), never to objects.
 
-Answer briefly, in the user's language. Report only what the tool results say happened; \
-if a search failed, say so and suggest what the user could try next.\
+Answer in one or two sentences, in the user's language. Report only what the tool results \
+say happened; if a search failed, say so and suggest what the user could try next.\
 """
 
 

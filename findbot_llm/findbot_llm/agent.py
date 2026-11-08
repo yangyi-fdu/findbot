@@ -10,6 +10,7 @@ Both the robot and the API clients are injected, so everything here is testable
 without ROS or the network.
 """
 import json
+import time
 from dataclasses import dataclass, field
 
 from findbot_llm.tools import openai_style_tools, build_tools, validate_args
@@ -68,20 +69,31 @@ class ClaudeBackend:
 class ZhipuBackend:
     """Zhipu GLM chat completions (OpenAI-style tool calls), via zai-sdk."""
 
-    def __init__(self, client, places, system, model='glm-4.7-flash'):
+    def __init__(self, client, places, system, model='glm-4.7-flash', busy_errors=(), sleep=time.sleep):
         self.client, self.model = client, model
         self.tools = openai_style_tools(places)
         self.messages = [{'role': 'system', 'content': system}]
+        # The free models answer HTTP 429 "访问量过大" at busy times; retry those with backoff.
+        self.busy_errors, self.sleep = tuple(busy_errors), sleep
 
     def add_user(self, text):
         self.messages.append({'role': 'user', 'content': text})
 
+    def create(self):
+        for attempt in range(4):
+            try:
+                return self.client.chat.completions.create(
+                    model=self.model, messages=self.messages, tools=self.tools,
+                    tool_choice='auto',          # the only value Zhipu supports
+                    temperature=0.2,             # we want consistent tool choices, not creativity
+                )
+            except self.busy_errors:
+                if attempt == 3:
+                    raise
+                self.sleep(2 ** (attempt + 1))   # 2, 4, 8 s
+
     def step(self) -> Turn:
-        r = self.client.chat.completions.create(
-            model=self.model, messages=self.messages, tools=self.tools,
-            tool_choice='auto',          # the only value Zhipu supports
-            temperature=0.2,             # we want consistent tool choices, not creativity
-        )
+        r = self.create()
         choice = r.choices[0]
         msg = choice.message
         calls = []

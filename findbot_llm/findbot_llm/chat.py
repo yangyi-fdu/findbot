@@ -47,7 +47,8 @@ def make_backend(name, model, places):
         # zai-sdk has no separate connection-error class; ZaiError is its base class,
         # so it is checked last (see handle()).
         errors = (zai.core.APIAuthenticationError, zai.core.APIStatusError, zai.core.ZaiError)
-        return ZhipuBackend(client, places, SYSTEM_PROMPT, model), errors
+        return ZhipuBackend(client, places, SYSTEM_PROMPT, model,
+                            busy_errors=(zai.core.APIReachLimitError,)), errors
     import anthropic
     errors = (anthropic.AuthenticationError, anthropic.APIStatusError, anthropic.APIConnectionError)
     return ClaudeBackend(anthropic.Anthropic(), places, SYSTEM_PROMPT, model), errors
